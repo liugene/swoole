@@ -2,37 +2,41 @@
 
 namespace linkphp\swoole;
 
-use linkphp\Application;
-use linkphp\Exception;
+use framework\Application;
+use framework\Exception;
 use linkphp\process\Process;
 use Swoole\Http\Server;
 
-class HttpServer
+abstract class HttpServer
 {
 
-    private $host;
+    protected $host;
 
-    private $port;
+    protected $port;
 
-    private $setting = [];
+    protected $setting = [];
 
     /**
      * Process对象
      * @var Process
      */
-    private $_process;
+    protected $_process;
 
     /**
      * Server对象
      * @var Server
      */
-    private $_server;
+    protected $_server;
 
     /**
      * Application对象
      * @var Application
      */
-    private $app;
+    protected $app;
+
+    protected $document_root;
+
+    protected $enable_static_handler = false;
 
     public function __construct(Application $application)
     {
@@ -48,6 +52,23 @@ class HttpServer
     public function setPort($port)
     {
         $this->port = $port;
+        return $this;
+    }
+
+    public function setDocumentRoot($root)
+    {
+        $this->document_root = $root;
+        return $this;
+    }
+
+    public function getDocumentRoot()
+    {
+        return $this->document_root;
+    }
+
+    public function setEnableStaticHandler($bool)
+    {
+        $this->enable_static_handler = $bool;
         return $this;
     }
 
@@ -70,93 +91,42 @@ class HttpServer
         $this->onStart();
         $this->onManagerStart();
         $this->onWorkerStart();
+        $this->onReceive();
         $this->onRequest();
+        $this->onClose();
         $this->_server->set($this->setting);
         $this->_server->start();
     }
 
-    protected function onStart()
-    {
-        $this->_server->on('Start',function ($server){
-            // 进程命名
-            $this->_process::setName("link-httpd: master {$this->host}:{$this->port}");
-        });
-    }
+    protected function onStart(){}
 
     // 管理进程启动事件
-    protected function onManagerStart()
-    {
-        $this->_server->on('ManagerStart', function ($server) {
-            // 进程命名
-            $this->_process::setName("link-httpd: manager");
-        });
-    }
+    protected function onManagerStart(){}
 
     // 工作进程启动事件
-    protected function onWorkerStart()
-    {
-        $this->_server->on('WorkerStart', function ($server, $workerId) {
-            // 进程命名
-            if ($workerId < $server->setting['worker_num']) {
-                $this->_process::setName("link-httpd: worker #{$workerId}");
-            } else {
-                $this->_process::setName("link-httpd: task #{$workerId}");
-            }
-        });
-        // 实例化Apps
-        $this->app->event('router');
-    }
+    protected function onWorkerStart(){}
+
+    protected function onReceive(){}
 
     // 请求事件
-    protected function onRequest()
+    protected function onRequest(){}
+
+    protected function onClose()
     {
-        $this->_server->on('request', function ($request, $response) {
-            $_GET = $request->get;
-            $_POST = $request->post;
-            $_COOKIE = $request->cookie;
-            $_FILES = $request->files;
-            if(isset($_SERVER)){
-                $_SERVER[] = array_merge($_SERVER,$request->server);
-            } else {
-                $_SERVER[] = $request->server;
-            }
-            $kernel = $this->app->get(\bin\http\Kernel::class);
-            $kernel->then(function() use($kernel){
-                $this->app->get(\linkphp\router\Router::class)
-                    ->setPath(
-                        $_SERVER[0]['path_info']
-                    )->setGetParam($this->app->input('get.'))
-                    ->parser()
-                    ->dispatch();
-                $kernel->setData($this->app->make(\linkphp\router\Router::class)
-                    ->getReturnData());
-            });
-            $response->status(200);
-            $response->end($kernel->complete());
+        $this->_server->on('Close',function ($server, $fd, $reactorId){
+            echo $reactorId;
+            $this->close();
         });
     }
 
     // 欢迎信息
-    protected function welcome()
-    {
-        $swooleVersion = swoole_version();
-        $phpVersion    = PHP_VERSION;
-        echo <<<EOL
- _        _              _                  
-| |      | |   _   ___  | |      ___
-| |  ___ | | / / /  _  \| |_   /  _  \
-| | | \ \| |/ /  | |_| ||  _ \ | |_| |
-| |_| |\ V |\ \  | .___/| | | || .___/
-|_____| \ _' \_\ | |    | | | || |
+    protected function welcome(){}
 
-EOL;
-        $this->send('Server    Name: link-httpd');
-        $this->send("PHP    Version: {$phpVersion}");
-        $this->send("Swoole Version: {$swooleVersion}");
-        $this->send("Listen    Address: {$this->host}");
-        $this->send("Listen    Port: {$this->port}");
-        return;
+    protected function close()
+    {
+        $this->send('Server    Name: link-httpd was closed');
     }
+
     // 发送至屏幕
     protected static function send($msg)
     {
