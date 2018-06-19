@@ -46,7 +46,7 @@ class HttpdServer extends HttpServer
         $this->_server->on('request', function ($request, $response) {
             $kernel = $this->app->get(\bin\http\Kernel::class);
             $request_uri = $request->server['request_uri'];
-            $php = preg_match('/\.php$/i',$request_uri);
+            $php = preg_match('/\.php/i',$request_uri);
             if($php || $request_uri == '' || $request_uri == null || $request_uri == '/'){
                 $httpRequest = $this->app->make(\linkphp\http\HttpRequest::class);
                 $httpRequest->setRequester($request);
