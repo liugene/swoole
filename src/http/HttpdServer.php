@@ -78,7 +78,9 @@ class HttpdServer extends HttpServer
                 } else {
                     $kernel->setData($res);
                     $response->status(200);
-                    $response->end($kernel->complete());
+                    $response->header('Content-Type', 'text/html; charset=utf-8');
+                    $response->end($res);
+                    return;
                 }
             }
             $response->status(200);

@@ -25,19 +25,23 @@ class StaticRes
     {
         $filename = $this->document_root . $this->query_uri;
         if(is_file($filename)){
-            return file_get_contents($filename);
+            // 页面缓存
+            ob_start();
+            ob_implicit_flush(0);
+            // 渲染输出
+            try {
+                include $filename;
+            } catch (\Exception $e) {
+                ob_end_clean();
+                throw $e;
+            }
+
+            // 获取并清空缓存
+            $content = ob_get_clean();
+            return $content;
 //            return $this->header(file_get_contents($filename));
         }
         return false;
-    }
-
-    private function header($string)
-    {
-        return "HTTP/1.1 200 OK\r\n"
-            . "Connection: close\r\n"
-            . "Content-Type: text/html\r\n"
-            . "Content-Length: ".strlen($string)."\r\n"
-            . "Server: httpd\r\n\r\n".$string;
     }
 
 }
