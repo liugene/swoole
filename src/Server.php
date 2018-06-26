@@ -5,9 +5,9 @@ namespace linkphp\swoole;
 use framework\Application;
 use framework\Exception;
 use linkphp\process\Process;
-use Swoole\Http\Server;
+use Swoole\Http\Server as SwooleServer;
 
-abstract class HttpServer
+abstract class Server
 {
 
     protected $host;
@@ -87,7 +87,7 @@ abstract class HttpServer
     public function start()
     {
         $this->welcome();
-        $this->_server = new Server($this->host, $this->port);
+        $this->_server = new SwooleServer($this->host, $this->port);
         $this->onStart();
         $this->onManagerStart();
         $this->onWorkerStart();

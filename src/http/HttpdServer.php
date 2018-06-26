@@ -3,9 +3,9 @@
 namespace linkphp\swoole\http;
 
 use framework\Exception;
-use linkphp\swoole\HttpServer;
+use linkphp\swoole\Server;
 
-class HttpdServer extends HttpServer
+class HttpdServer extends Server
 {
 
     protected function onStart()
